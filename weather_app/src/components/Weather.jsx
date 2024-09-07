@@ -1,18 +1,18 @@
 import React, { useEffect, useRef, useState } from "react";
-import "./Weather.css";
-import search_logo from "../assets/images-icons/search.png";
+import WeatherInfo from "./WeatherInfo";
+import WeatherIcon from "./WeatherIcon";
+import SearchBar from "./SearchBar";
+import { fetchWeatherData } from "../services/weatherService";
 import clear_icon from "../assets/images-icons/clear.png";
 import cloud_icon from "../assets/images-icons/cloud.png";
 import drizzle_icon from "../assets/images-icons/drizzle.png";
-import humidity_icon from "../assets/images-icons/humidity.png";
 import rain_icon from "../assets/images-icons/rain.png";
 import snow_icon from "../assets/images-icons/snow.png";
-import wind_icon from "../assets/images-icons/wind.png";
+import "./Weather.css";
 
 const Weather = () => {
   const inputRef = useRef();
-
-  const [weatherInfo, setWeatherInfo] = useState(false);
+  const [weatherInfo, setWeatherInfo] = useState(null);
 
   const allIcons = {
     "01d": clear_icon,
@@ -32,80 +32,44 @@ const Weather = () => {
   };
 
   const search = async (city) => {
-    if (city == "") {
-      alert("City name should not be Empty. Please Enter city Name");
-      return;
-    }
     try {
-      const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&units=metric&appid=${
-        import.meta.env.VITE_API_KEY
-      }`;
-      const response = await fetch(url);
-      const data = await response.json();
-      
-      if (!response.ok){
-        alert(data.message)
-        return
-      }
+      const API_KEY = import.meta.env.VITE_API_KEY;
+      const data = await fetchWeatherData(city, API_KEY);
       const icon = allIcons[data.weather[0].icon] || clear_icon;
+
       setWeatherInfo({
         humidity: data.main.humidity,
         windSpeed: data.wind.speed,
         temperature: Math.floor(data.main.temp),
         location: data.name,
-        icon: icon,
+        icon,
       });
+      inputRef.current.value = "";
     } catch (error) {
-      setWeatherInfo(false);
+      alert(error.message);
+      setWeatherInfo(null);
     }
   };
+
   useEffect(() => {
     search("Addis Ababa");
   }, []);
+
   return (
     <section className="weather">
-      <div className="search-bar">
-        <input
-          ref={inputRef}
-          type="text"
-          placeholder="Enter a city"
-          autoFocus
-        />
-        <img
-          onClick={() => search(inputRef.current.value)}
-          src={search_logo}
-          alt="Search icon"
-        />
-      </div>
-      {weatherInfo ? (
+      <SearchBar search={search} inputRef={inputRef} />
+      {weatherInfo && (
         <>
-          <img
-            src={weatherInfo.icon}
-            alt="Current weather icon"
-            className="weather-icon"
+          <WeatherIcon
+            icon={weatherInfo.icon}
+            temperature={weatherInfo.temperature}
+            location={weatherInfo.location}
           />
-          <span className="temperature">{weatherInfo.temperature} </span>
-          <span className="city-name">{weatherInfo.location}</span>
-
-          <div className="weather-info">
-            <div className="info">
-              <img src={humidity_icon} alt="Humidity Icon" />
-              <div>
-                <p>{weatherInfo.humidity}</p>
-                <span>Humidity</span>
-              </div>
-            </div>
-            <div className="info">
-              <img src={wind_icon} alt="wind Icon" />
-              <div>
-                <p>{weatherInfo.windSpeed}</p>
-                <span>Wind Speed</span>
-              </div>
-            </div>
-          </div>
+          <WeatherInfo
+            humidity={weatherInfo.humidity}
+            windSpeed={weatherInfo.windSpeed}
+          />
         </>
-      ) : (
-        <></>
       )}
     </section>
   );
